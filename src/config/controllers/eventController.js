@@ -147,7 +147,7 @@ async function uploadEventMedia(req, res) {
     }
 
     const mediaType = req.file.mimetype.startsWith("video") ? "video" : "image";
-    const mediaUrl = `${req.protocol}://${req.get("host")}/uploads/events/${req.file.filename}`;
+    const mediaUrl = `${process.env.APP_URL}/uploads/events/${req.file.filename}`;
 
     res.json({
       message: "Media uploaded successfully",
@@ -184,7 +184,7 @@ async function updateEventMedia(req, res) {
         ? "video"
         : "image";
 
-      const mediaUrl = `${req.protocol}://${req.get("host")}/uploads/events/${file.filename}`;
+      const mediaUrl = `${process.env.APP_URL}/uploads/events/${file.filename}`;
 
       const media = await EventMedia.create({
         event_id: id,

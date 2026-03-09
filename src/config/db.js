@@ -4,12 +4,12 @@ const { Sequelize } = require('sequelize');
 
 // Create Sequelize instance using environment variables
 const sequelize = new Sequelize(
-  process.env.MYSQLDATABASE || process.env.DB_NAME || 'evntra_db',
-  process.env.MYSQLUSER || process.env.DB_USER || 'evntra_user',
-  process.env.MYSQLPASSWORD || process.env.DB_PASS || 'WelcomeToAPP',
+  process.env.DB_NAME || process.env.DB_NAME || 'evntra_db',
+  process.env.DB_USER || process.env.DB_USER || 'evntra_user',
+  process.env.DB_PASS || process.env.DB_PASS || 'WelcomeToAPP',
   {
-    host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
-    port: process.env.MYSQLPORT || process.env.DB_PORT || 3306,
+    host: process.env.DB_HOST || process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || process.env.DB_PORT || 3306,
     dialect: process.env.DB_DIALECT || 'mysql',
     logging: process.env.DB_LOGGING === 'true' ? console.log : false,
     timezone: '+05:30', // India Standard Time

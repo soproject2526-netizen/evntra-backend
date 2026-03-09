@@ -6,7 +6,8 @@ const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
-
+const fs = require("fs");
+app.set('trust proxy', 1);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -22,9 +23,20 @@ app.use('/api', routes);
 // Static uploads
 app.use(
   '/uploads',
-  express.static(path.join(__dirname, 'uploads'))
+  express.static(path.join(__dirname, '../uploads'))
 );
+console.log("Uploads path:", path.join(__dirname, '../uploads'));
 
+app.get("/debug-uploads", (req, res) => {
+  const dir = path.join(__dirname, "../uploads/events");
+
+  if (!fs.existsSync(dir)) {
+    return res.send("uploads/events folder NOT found");
+  }
+
+  const files = fs.readdirSync(dir);
+  res.json(files);
+});
 
 // Error handler
 app.use((err, req, res, next) => {

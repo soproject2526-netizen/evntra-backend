@@ -7,25 +7,23 @@ const { sequelize } = require('../models');
  * Toggle like. Returns updated likes_count and is_liked.
  */
 async function toggleLike(req, res, next) {
-  const user = req.user;
-  if (!user) {
-    return res.status(401).json({ message: 'Authentication required' });
-  }
 
-  const userId = user.id;
+  // TEMP USER FOR TESTING
+  const userId = req.user ? req.user.id : 15;
+
   const eventId = parseInt(req.params.id, 10);
 
   const t = await sequelize.transaction();
 
   try {
-    //  Ensure event exists
+
     const event = await Event.findByPk(eventId, { transaction: t });
+
     if (!event) {
       await t.rollback();
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    // 🔍 Check existing like
     const existing = await Like.findOne({
       where: { user_id: userId, event_id: eventId },
       transaction: t
@@ -34,23 +32,29 @@ async function toggleLike(req, res, next) {
     let isLiked;
 
     if (existing) {
-      // UNLIKE
+
       await existing.destroy({ transaction: t });
-      await event.decrement('likes_count', { by: 1, transaction: t });
+
+      if (event.likes_count > 0) {
+        await event.decrement('likes_count', { by: 1, transaction: t });
+      }
+
       isLiked = false;
+
     } else {
-      // LIKE
+
       await Like.create(
         { user_id: userId, event_id: eventId },
         { transaction: t }
       );
+
       await event.increment('likes_count', { by: 1, transaction: t });
+
       isLiked = true;
     }
 
     await t.commit();
 
-    // 🔁 Reload updated count
     await event.reload();
 
     return res.json({
@@ -59,8 +63,10 @@ async function toggleLike(req, res, next) {
     });
 
   } catch (err) {
+
     await t.rollback();
     next(err);
+
   }
 }
 

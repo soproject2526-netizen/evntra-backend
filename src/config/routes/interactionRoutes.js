@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/authMiddleware');
- // create requireAuth to enforce login
+// create requireAuth to enforce login
 const {
   toggleLike,
   toggleFavorite,
@@ -11,9 +11,9 @@ const {
   createComment
 } = require('../controllers/interactionController');
 
-router.post('/:id/like', auth, toggleLike);
+router.post('/:id/like', toggleLike);
 router.post('/:id/favorite', auth, toggleFavorite);
-//router.post('/:id/share', authOptionalOrPublic, logShare); // allow unauthenticated shares (log user if available)
+router.post('/:id/share', logShare); 
 
 router.get('/:id/comments', listComments);
 router.post('/:id/comments', auth, createComment);
