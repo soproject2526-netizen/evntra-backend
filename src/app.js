@@ -1,5 +1,6 @@
 const express = require('express');
 const app = express();
+app.set('trust proxy', 1);
 const bodyParser = require('body-parser');
 const path = require('path');
 const helmet = require('helmet');
@@ -7,7 +8,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const fs = require("fs");
-app.set('trust proxy', 1);
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
