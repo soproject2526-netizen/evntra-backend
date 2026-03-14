@@ -1,15 +1,62 @@
 const express = require("express");
 const router = express.Router();
-const upload = require("../../middleware/upload");
+const multer = require("multer");
 const eventController = require("../controllers/eventController");
-const authOptional = require("../../middleware/authOptional");
 const eventsController = require("../controllers/eventsController");
+const authOptional = require("../../middleware/authOptional");
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads/events");
+  },
+  filename: function (req, file, cb) {
+    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, unique + path.extname(file.originalname));
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+
+  const allowedExtensions = [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+    ".mp4",
+    ".mov",
+    ".mkv"
+  ];
+
+  const ext = path.extname(file.originalname).toLowerCase();
+
+  if (allowedExtensions.includes(ext)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only images and videos are allowed"), false);
+  }
+};
+
+// Multer upload configuration
+const upload = multer({
+  dest: "uploads/events",
+  limits: {
+    fileSize: 20 * 1024 * 1024 // 20MB
+  }
+});
 
 // Create event
-router.post("/", upload.array("media", 10), eventController.createEvent);
+router.post(
+  "/",
+  upload.array("media", 10),
+  eventController.createEvent
+);
 
-//  List all events
-router.get("/", authOptional, eventsController.listEvents);
+// List all events
+router.get(
+  "/",
+  authOptional,
+  eventsController.listEvents
+);
 
 // Upload media file
 router.post(
@@ -18,10 +65,10 @@ router.post(
   eventController.uploadEventMedia
 );
 
-// Update primary media for an event (saves to event_media table)
+// Update primary media for an event
 router.put(
   "/:id",
-  upload.single("media"), // must upload file when updating
+  upload.single("media"),
   eventController.updateEventMedia
 );
 

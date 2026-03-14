@@ -20,6 +20,8 @@ app.use(rateLimit({ windowMs: 60 * 1000, max: 120 }));
 // SINGLE ENTRY POINT FOR ROUTES
 const routes = require('./config/routes');
 app.use('/api', routes);
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Static uploads
 app.use(

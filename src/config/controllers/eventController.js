@@ -69,7 +69,11 @@ async function createEvent(req, res) {
       for (let i = 0; i < req.files.length; i++) {
         const file = req.files[i];
 
-        const mediaType = file.mimetype.startsWith("video") ? "video" : "image";
+        const ext = path.extname(file.originalname).toLowerCase();
+
+        const videoExtensions = [".mp4", ".mov", ".mkv"];
+
+        const mediaType = videoExtensions.includes(ext) ? "video" : "image";
 
         const mediaUrl = `${process.env.APP_URL}/uploads/events/${file.filename}`;
 
@@ -128,14 +132,25 @@ async function createEvent(req, res) {
       }
     });
 
-  } catch (error) {
-    await transaction.rollback();
-    console.error("CREATE EVENT ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Event creation failed"
-    });
-  }
+  }catch (error) {
+
+  console.log("=====================================");
+  console.log("❌ EVENT CREATION FAILED");
+  console.log("TIME:", new Date().toISOString());
+  console.log("REQUEST BODY:", req.body);
+  console.log("FILES:", req.files);
+  console.log("ERROR MESSAGE:", error.message);
+  console.log("ERROR STACK:", error.stack);
+  console.log("=====================================");
+
+  await transaction.rollback();
+
+  return res.status(500).json({
+    success: false,
+    message: "Event creation failed",
+    error: error.message
+  });
+}
 }
 
 
