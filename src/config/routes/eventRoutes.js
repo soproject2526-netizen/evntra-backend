@@ -45,31 +45,18 @@ const upload = multer({
 });
 
 // Create event
-router.post(
-  "/",
-  upload.array("media", 10),
-  eventController.createEvent
-);
+router.post("/",upload.array("media", 10),eventController.createEvent);
+
+// Became Organizer
+router.post("/become-organizer", authMiddleware, eventController.becomeOrganizer);
 
 // List all events
-router.get(
-  "/",
-  authOptional,
-  eventsController.listEvents
-);
+router.get("/",authOptional,eventsController.listEvents);
 
 // Upload media file
-router.post(
-  "/upload-media",
-  upload.single("media"),
-  eventController.uploadEventMedia
-);
+router.post("/upload-media",upload.single("media"),eventController.uploadEventMedia);
 
 // Update primary media for an event
-router.put(
-  "/:id",
-  upload.single("media"),
-  eventController.updateEventMedia
-);
+router.put("/:id",upload.single("media"),eventController.updateEventMedia);
 
 module.exports = router;

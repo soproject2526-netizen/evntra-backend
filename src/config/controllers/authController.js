@@ -37,7 +37,8 @@ async function signup(req, res, next) {
       password,
       confirm_password,
       city_id,
-      profile_image
+      profile_image,
+      role
     } = req.body;
 
     const finalPhone = phone || mobile;
@@ -64,7 +65,8 @@ async function signup(req, res, next) {
       phone: finalPhone,
       password_hash,
       city_id,
-      profile_image: profile_image || null
+      profile_image: profile_image || null,
+      role: role || "user"
     });
 
     const token = signToken({ id: user.id, email: user.email, role: user.role });
@@ -111,7 +113,8 @@ async function signin(req, res, next) {
         id: user.id,
         full_name: user.full_name,
         email: user.email,
-        city_id: user.city_id
+        city_id: user.city_id,
+        role: user.role
       }
     });
   } catch (err) {

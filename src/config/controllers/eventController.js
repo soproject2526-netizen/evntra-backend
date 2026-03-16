@@ -1,4 +1,4 @@
-const { Event, EventMedia, EventSubcategory } = require('../models');
+const { Event, EventMedia, EventSubcategory, User} = require('../models');
 const fs = require('fs');
 const path = require('path');
 
@@ -7,7 +7,6 @@ async function createEvent(req, res) {
   const transaction = await Event.sequelize.transaction();
   try {
     const {
-      organizer_id,
       category_id,
       subcategory_ids,
       title,
@@ -25,11 +24,22 @@ async function createEvent(req, res) {
       end_time
     } = req.body;
 
-    if (!organizer_id || !title || !start_time) {
+    const organizer_id = req.user.id;
+
+    if (!title || !start_time || !category_id || !city_id) {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: "organizer_id, title, start_time, category_id are required"
+        message: "title, start_time, category_id, city_id are required"
+      });
+    }
+
+    const user = await User.findByPk(req.user.id);
+
+    if (!user || user.role !== "organizer") {
+      return res.status(403).json({
+        success: false,
+        message: "Only organizers can create events"
       });
     }
 
@@ -132,27 +142,65 @@ async function createEvent(req, res) {
       }
     });
 
-  }catch (error) {
+  } catch (error) {
 
-  console.log("=====================================");
-  console.log("❌ EVENT CREATION FAILED");
-  console.log("TIME:", new Date().toISOString());
-  console.log("REQUEST BODY:", req.body);
-  console.log("FILES:", req.files);
-  console.log("ERROR MESSAGE:", error.message);
-  console.log("ERROR STACK:", error.stack);
-  console.log("=====================================");
+    console.log("=====================================");
+    console.log("❌ EVENT CREATION FAILED");
+    console.log("TIME:", new Date().toISOString());
+    console.log("REQUEST BODY:", req.body);
+    console.log("FILES:", req.files);
+    console.log("ERROR MESSAGE:", error.message);
+    console.log("ERROR STACK:", error.stack);
+    console.log("=====================================");
 
-  await transaction.rollback();
+    await transaction.rollback();
 
-  return res.status(500).json({
-    success: false,
-    message: "Event creation failed",
-    error: error.message
-  });
+    return res.status(500).json({
+      success: false,
+      message: "Event creation failed",
+      error: error.message
+    });
+  }
 }
-}
+ 
+//Became organizer
+async function becomeOrganizer(req, res) {
+  try {
 
+    const user = await User.findByPk(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success:false,
+        message:"User not found"
+      });
+    }
+
+    if(user.role === "organizer"){
+      return res.json({
+        success:true,
+        message:"Already organizer"
+      });
+    }
+
+    await user.update({
+      role:"organizer"
+    });
+
+    return res.json({
+      success:true,
+      message:"You are now an organizer"
+    });
+
+  } catch(error){
+    console.error("BECOME ORGANIZER ERROR",error);
+
+    return res.status(500).json({
+      success:false,
+      message:"Failed to become organizer"
+    });
+  }
+}
 
 // 🟢 UPLOAD EVENT MEDIA
 async function uploadEventMedia(req, res) {
@@ -236,5 +284,6 @@ async function updateEventMedia(req, res) {
 module.exports = {
   createEvent,
   uploadEventMedia,
-  updateEventMedia
+  updateEventMedia,
+  becomeOrganizer
 };
