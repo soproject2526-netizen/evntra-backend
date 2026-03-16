@@ -48,7 +48,7 @@ const upload = multer({
 router.post("/",upload.array("media", 10),eventController.createEvent);
 
 // Became Organizer
-router.post("/become-organizer", authMiddleware, eventController.becomeOrganizer);
+router.post("/become-organizer", eventController.becomeOrganizer);
 
 // List all events
 router.get("/",authOptional,eventsController.listEvents);
