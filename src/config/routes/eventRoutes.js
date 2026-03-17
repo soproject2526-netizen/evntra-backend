@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
+const path = require("path");
 const eventController = require("../controllers/eventController");
 const eventsController = require("../controllers/eventsController");
 const authOptional = require("../../middleware/authOptional");
