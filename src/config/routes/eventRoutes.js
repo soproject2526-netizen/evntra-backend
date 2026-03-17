@@ -1,3 +1,4 @@
+
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
@@ -38,9 +39,10 @@ const fileFilter = (req, file, cb) => {
 
 // Multer upload configuration
 const upload = multer({
-  dest: "uploads/events",
+  storage,
+  fileFilter,
   limits: {
-    fileSize: 20 * 1024 * 1024 // 20MB
+    fileSize: 20 * 1024 * 1024
   }
 });
 

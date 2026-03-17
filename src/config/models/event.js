@@ -10,15 +10,15 @@ module.exports = (sequelize, DataTypes) => {
     city_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
     venue_name: { type: DataTypes.STRING },
     address: { type: DataTypes.STRING },
-    lat: { type: DataTypes.DECIMAL(10,7) },
-    lng: { type: DataTypes.DECIMAL(10,7) },
-    price: { type: DataTypes.DECIMAL(10,2), defaultValue: 0 },
+    lat: { type: DataTypes.DECIMAL(10, 7) },
+    lng: { type: DataTypes.DECIMAL(10, 7) },
+    price: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
     currency: { type: DataTypes.STRING(10), defaultValue: 'INR' },
     is_free: { type: DataTypes.BOOLEAN, defaultValue: false },
     capacity: { type: DataTypes.INTEGER, defaultValue: 0 },
     start_time: { type: DataTypes.DATE },
     end_time: { type: DataTypes.DATE },
-    status: { type: DataTypes.ENUM('draft','published','cancelled'), defaultValue: 'published' }
+    status: { type: DataTypes.ENUM('draft', 'published', 'cancelled'), defaultValue: 'published' }
   }, {
     tableName: 'events',
     underscored: true,
@@ -34,6 +34,11 @@ module.exports = (sequelize, DataTypes) => {
     Event.hasMany(models.EventMedia, {
       foreignKey: 'event_id',
       as: 'media'
+    });
+
+    Event.belongsTo(models.User, {
+      foreignKey: "organizer_id",
+      as: "organizer"
     });
   };
 
