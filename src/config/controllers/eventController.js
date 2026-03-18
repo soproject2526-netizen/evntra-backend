@@ -1,4 +1,4 @@
-const { Event, EventMedia, EventSubcategory, User} = require('../models');
+const { Event, EventMedia, EventSubcategory, User } = require('../models');
 const fs = require('fs');
 const path = require('path');
 
@@ -25,6 +25,14 @@ async function createEvent(req, res) {
     } = req.body;
 
     const organizer_id = req.user.id;
+    if (!organizer_id) {
+      await transaction.rollback();
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: No user found"
+      });
+    }
+
 
     if (!title || !start_time || !category_id || !city_id) {
       await transaction.rollback();
@@ -162,7 +170,7 @@ async function createEvent(req, res) {
     });
   }
 }
- 
+
 //Became organizer
 async function becomeOrganizer(req, res) {
   try {
@@ -171,33 +179,33 @@ async function becomeOrganizer(req, res) {
 
     if (!user) {
       return res.status(404).json({
-        success:false,
-        message:"User not found"
+        success: false,
+        message: "User not found"
       });
     }
 
-    if(user.role === "organizer"){
+    if (user.role === "organizer") {
       return res.json({
-        success:true,
-        message:"Already organizer"
+        success: true,
+        message: "Already organizer"
       });
     }
 
     await user.update({
-      role:"organizer"
+      role: "organizer"
     });
 
     return res.json({
-      success:true,
-      message:"You are now an organizer"
+      success: true,
+      message: "You are now an organizer"
     });
 
-  } catch(error){
-    console.error("BECOME ORGANIZER ERROR",error);
+  } catch (error) {
+    console.error("BECOME ORGANIZER ERROR", error);
 
     return res.status(500).json({
-      success:false,
-      message:"Failed to become organizer"
+      success: false,
+      message: "Failed to become organizer"
     });
   }
 }
