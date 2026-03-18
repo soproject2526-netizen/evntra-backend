@@ -11,7 +11,7 @@ const {
   createComment
 } = require('../controllers/interactionController');
 
-router.post('/:id/like', toggleLike);
+router.post('/:id/like', auth, toggleLike);
 router.post('/:id/favorite', auth, toggleFavorite);
 router.post('/:id/share', logShare); 
 
