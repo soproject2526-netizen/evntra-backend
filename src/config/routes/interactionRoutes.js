@@ -1,7 +1,7 @@
 // src/routes/interactionRoutes.js
 const express = require('express');
 const router = express.Router();
-const auth = require('../../middleware/authMiddleware');
+const auth = require('../../middleware/requireAuth');
 // create requireAuth to enforce login
 const {
   toggleLike,

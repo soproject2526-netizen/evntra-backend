@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const auth = require('../../../middleware/authMiddleware');
+const auth = require('../../../middleware/requireAuth');
 const upload = require('../../../middleware/upload');
 const organizerKycController = require('../../controllers/organizerKycController');
 
