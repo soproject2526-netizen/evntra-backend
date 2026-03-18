@@ -19,6 +19,13 @@ async function toggleLike(req, res, next) {
   try {
     console.log("👍 LIKE REQUEST:", { userId, eventId });
 
+    // ✅ CHECK USER EXISTS (VERY IMPORTANT)
+    const user = await User.findByPk(userId);
+    if (!user) {
+      await t.rollback();
+      return res.status(401).json({ message: 'User not found in DB' });
+    }
+
     const event = await Event.findByPk(eventId, { transaction: t });
 
     if (!event) {
@@ -55,13 +62,6 @@ async function toggleLike(req, res, next) {
     await t.commit();
 
     await event.reload();
-
-    console.log("✅ LIKE UPDATED:", {
-      userId,
-      eventId,
-      isLiked,
-      likes: event.likes_count
-    });
 
     return res.json({
       is_liked: isLiked,
