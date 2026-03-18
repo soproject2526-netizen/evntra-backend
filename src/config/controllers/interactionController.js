@@ -1,5 +1,5 @@
 // src/controllers/interactionController.js
-const { Like, Share, Favorite, Event, Comment } = require('../models');
+const { Like, Share, Favorite, Event, Comment, User } = require('../models');
 const { sequelize } = require('../models');
 
 /**
