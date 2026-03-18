@@ -1,6 +1,7 @@
 const { Event, EventMedia, EventSubcategory, User } = require('../models');
 const fs = require('fs');
 const path = require('path');
+const jwt = require("jsonwebtoken");
 
 // CREATE EVENT
 async function createEvent(req, res) {
@@ -174,8 +175,11 @@ async function createEvent(req, res) {
 //Became organizer
 async function becomeOrganizer(req, res) {
   try {
+    console.log("USER FROM TOKEN:", req.user);
 
     const user = await User.findByPk(req.user.id);
+
+    console.log("USER FROM DB BEFORE:", user.toJSON());
 
     if (!user) {
       return res.status(404).json({
@@ -184,16 +188,11 @@ async function becomeOrganizer(req, res) {
       });
     }
 
-    if (user.role === "organizer") {
-      return res.json({
-        success: true,
-        message: "Already organizer"
-      });
-    }
+    await user.update({ role: "organizer" });
 
-    await user.update({
-      role: "organizer"
-    });
+    await user.reload(); // 🔥 VERY IMPORTANT
+
+    console.log("USER AFTER UPDATE:", user.toJSON());
 
     return res.json({
       success: true,
@@ -209,7 +208,6 @@ async function becomeOrganizer(req, res) {
     });
   }
 }
-
 // 🟢 UPLOAD EVENT MEDIA
 async function uploadEventMedia(req, res) {
   try {

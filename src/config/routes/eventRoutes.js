@@ -5,7 +5,7 @@ const multer = require("multer");
 const path = require("path");
 const eventController = require("../controllers/eventController");
 const eventsController = require("../controllers/eventsController");
-const protect = require("../../middleware/authMiddleware");
+const requireAuth = require("../../middleware/requireAuth");
 const authOptional = require("../../middleware/authOptional");
 
 const storage = multer.diskStorage({
@@ -49,10 +49,10 @@ const upload = multer({
 });
 
 // Create event
-router.post("/",upload.array("media", 10),protect,eventController.createEvent);
+router.post("/",upload.array("media", 10),requireAuth,eventController.createEvent);
 
 // Became Organizer
-router.post("/become-organizer", eventController.becomeOrganizer);
+router.post("/become-organizer",requireAuth, eventController.becomeOrganizer);
 
 // List all events
 router.get("/",authOptional,eventsController.listEvents);
