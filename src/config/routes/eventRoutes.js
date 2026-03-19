@@ -2,20 +2,20 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('../cloudinary');
 const path = require("path");
 const eventController = require("../controllers/eventController");
 const eventsController = require("../controllers/eventsController");
 const requireAuth = require("../../middleware/requireAuth");
 const authOptional = require("../../middleware/authOptional");
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/events");
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'events',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'mp4'],
   },
-  filename: function (req, file, cb) {
-    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, unique + path.extname(file.originalname));
-  }
 });
 
 const fileFilter = (req, file, cb) => {

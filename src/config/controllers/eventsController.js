@@ -10,7 +10,7 @@ const {
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
-const BASE_URL = process.env.APP_URL;
+// const BASE_URL = process.env.APP_URL;
 
 /**
  * GET /api/events
@@ -192,7 +192,7 @@ async function listEvents(req, res, next) {
             media_type: m.media_type,
             storage_filename: m.storage_filename,
             original_filename: m.original_filename,
-            url: `${BASE_URL}/uploads/events/${m.storage_filename}`,
+            url: m.url,
             order_index: m.order_index,
             width: m.width,
             height: m.height,
@@ -290,7 +290,7 @@ async function getEventsFeed(req, res) {
           media_type: m.media_type,
           storage_filename: m.storage_filename,
           original_filename: m.original_filename,
-          url: `${BASE_URL}/uploads/events/${m.storage_filename}`,
+          url: m.url,
           order_index: m.order_index
         }))
     : [];
