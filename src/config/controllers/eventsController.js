@@ -192,7 +192,7 @@ async function listEvents(req, res, next) {
             media_type: m.media_type,
             storage_filename: m.storage_filename,
             original_filename: m.original_filename,
-            url: m.url,
+            url: m.url || m.path || null,
             order_index: m.order_index,
             width: m.width,
             height: m.height,
@@ -206,7 +206,10 @@ async function listEvents(req, res, next) {
         ? {
           id: media[0].id,
           media_type: media[0].media_type,
-          url: media[0].url,
+
+          // ✅ SAFE URL
+          url: media[0].url || null,
+
           storage_filename: media[0].storage_filename,
           original_filename: media[0].original_filename,
           recommended_dimensions: {
@@ -215,9 +218,6 @@ async function listEvents(req, res, next) {
           }
         }
         : null;
-
-
-
       return {
         id: evJs.id,
         title: evJs.title,
@@ -275,42 +275,43 @@ async function getEventsFeed(req, res) {
             "original_filename",
             "width",
             "height",
-            "duration_seconds"
+            "duration_seconds",
+            "url"
           ]
         }
       ]
     });
 
     const data = rows.map(event => {
-  const media = event.media?.length
-    ? event.media
-        .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
-        .map(m => ({
-          id: m.id,
-          media_type: m.media_type,
-          storage_filename: m.storage_filename,
-          original_filename: m.original_filename,
-          url: m.url,
-          order_index: m.order_index
-        }))
-    : [];
+      const media = event.media?.length
+        ? event.media
+          .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+          .map(m => ({
+            id: m.id,
+            media_type: m.media_type,
+            storage_filename: m.storage_filename,
+            original_filename: m.original_filename,
+            url: m.url,
+            order_index: m.order_index
+          }))
+        : [];
 
-  return {
-    id: event.id,
-    title: event.title,
-    description: event.description,
-    start_time: event.start_time,
-    end_time: event.end_time,
-    city_id: event.city_id,
-    venue_name: event.venue_name,
-    price: event.price,
-    is_free: Boolean(event.is_free),
-    likes_count: event.likes_count,
-    comments_count: event.comments_count,
-    primary_media: media[0] || null,
-    media
-  };
-});
+      return {
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        start_time: event.start_time,
+        end_time: event.end_time,
+        city_id: event.city_id,
+        venue_name: event.venue_name,
+        price: event.price,
+        is_free: Boolean(event.is_free),
+        likes_count: event.likes_count,
+        comments_count: event.comments_count,
+        primary_media: media[0] || null,
+        media
+      };
+    });
 
 
     return res.json({
