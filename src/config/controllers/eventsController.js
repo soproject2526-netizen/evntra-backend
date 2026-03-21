@@ -121,7 +121,8 @@ async function listEvents(req, res, next) {
           'height',
           'duration_seconds',
           'storage_filename',
-          'original_filename'
+          'original_filename',
+          'url' 
         ]
 
       }
@@ -206,10 +207,7 @@ async function listEvents(req, res, next) {
         ? {
           id: media[0].id,
           media_type: media[0].media_type,
-
-          // ✅ SAFE URL
           url: media[0].url || null,
-
           storage_filename: media[0].storage_filename,
           original_filename: media[0].original_filename,
           recommended_dimensions: {
@@ -231,11 +229,8 @@ async function listEvents(req, res, next) {
         likes_count: parseInt(evJs.likes_count || 0, 10),
         comments_count: parseInt(evJs.comments_count || 0, 10),
         is_liked_by_user: !!parseInt(evJs.is_liked_by_user || 0, 10),
-
-        //  FIX
         primary_media,
-        media, // ← THIS WAS MISSING ❗❗❗
-
+        media, 
         chat_room_id: null
       };
     });
