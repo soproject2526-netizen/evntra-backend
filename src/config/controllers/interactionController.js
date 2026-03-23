@@ -19,13 +19,6 @@ async function toggleLike(req, res, next) {
   try {
     console.log("👍 LIKE REQUEST:", { userId, eventId });
 
-    // ✅ CHECK USER EXISTS (VERY IMPORTANT)
-    const user = await User.findByPk(userId);
-    if (!user) {
-      await t.rollback();
-      return res.status(401).json({ message: 'User not found in DB' });
-    }
-
     const event = await Event.findByPk(eventId, { transaction: t });
 
     if (!event) {
@@ -41,37 +34,39 @@ async function toggleLike(req, res, next) {
     let isLiked;
 
     if (existing) {
+      // 🔴 UNLIKE
       await existing.destroy({ transaction: t });
-
-      if (event.likes_count > 0) {
-        await event.decrement('likes_count', { by: 1, transaction: t });
-      }
-
       isLiked = false;
     } else {
+      // 🟢 LIKE
       await Like.create(
         { user_id: userId, event_id: eventId },
         { transaction: t }
       );
-
-      await event.increment('likes_count', { by: 1, transaction: t });
-
       isLiked = true;
     }
 
+    // ✅ ALWAYS RE-CALCULATE COUNT (MOST IMPORTANT FIX)
+    const likesCount = await Like.count({
+      where: { event_id: eventId },
+      transaction: t
+    });
+
     await t.commit();
 
-    await event.reload();
-
     return res.json({
+      success: true,
       is_liked: isLiked,
-      likes_count: Number(event.likes_count) || 0
+      likes_count: likesCount
     });
 
   } catch (err) {
     await t.rollback();
     console.error("❌ LIKE ERROR:", err);
-    next(err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to toggle like"
+    });
   }
 }
 
