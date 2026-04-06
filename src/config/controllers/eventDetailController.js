@@ -43,7 +43,7 @@ async function getEventDetail(req, res, next) {
         {
           model: User,
           as: 'organizer',
-          attributes: ['id', 'name', 'avatar_url', 'phone', 'email']
+          attributes: ['id', 'full_name', 'avatar_url', 'phone', 'email']
         },
         {
           model: City,
@@ -137,7 +137,7 @@ async function getEventDetail(req, res, next) {
       organizer: event.organizer
         ? {
           id: event.organizer.id,
-          name: event.organizer.name,
+          name: event.organizer.full_name,
           avatar_url: event.organizer.avatar_url
         }
         : null,
