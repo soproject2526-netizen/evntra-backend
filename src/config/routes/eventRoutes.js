@@ -7,6 +7,7 @@ const cloudinary = require('../cloudinary');
 const path = require("path");
 const eventController = require("../controllers/eventController");
 const eventsController = require("../controllers/eventsController");
+const { getEventDetail } = require("../controllers/eventDetailController");
 const requireAuth = require("../../middleware/requireAuth");
 const authOptional = require("../../middleware/authOptional");
 
@@ -56,6 +57,9 @@ router.post("/become-organizer",requireAuth, eventController.becomeOrganizer);
 
 // List all events
 router.get("/",authOptional,eventsController.listEvents);
+
+// Single Detail Event 
+router.get("/:id", authOptional, getEventDetail);
 
 // Upload media file
 router.post("/upload-media",upload.single("media"),eventController.uploadEventMedia);
