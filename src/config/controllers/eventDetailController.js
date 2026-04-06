@@ -70,7 +70,7 @@ async function getEventDetail(req, res, next) {
       EventParticipant.count({ where: { event_id: eventId } }),
       EventParticipant.findAll({
         where: { event_id: eventId },
-        include: [{ model: User, as: 'user', attributes: ['id', 'avatar_url'] }],
+        include: [{ model: User, as: 'user', attributes: ['id', 'profile_image'] }],
         limit: 5
       })
     ]);
@@ -151,7 +151,10 @@ async function getEventDetail(req, res, next) {
           participantsCount >= 1000
             ? `${(participantsCount / 1000).toFixed(1)}k Members joined`
             : `${participantsCount} Members joined`,
-        avatars: participantRows.map(p => p.user)
+        avatars: participantRows.map(p => ({
+          id: p.user.id,
+          avatar_url: p.user.profile_image
+        }))
       },
       ui_flags: {
         can_chat_with_organizer: true,
