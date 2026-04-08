@@ -4,7 +4,7 @@ const { User } = require('../models');
 const { hashPassword, comparePassword } = require('../../utils/hash');
 const { signToken } = require('../../utils/jwt');
 const nodemailer = require('nodemailer');
-const cloudinary = require('../config/cloudinary');
+const cloudinary = require('../cloudinary');
 
 // ================= EMAIL TRANSPORTER =================
 const transporter = nodemailer.createTransport({
@@ -57,6 +57,23 @@ async function signup(req, res, next) {
     const password_hash = await hashPassword(password);
     const full_name = `${first_name} ${last_name}`;
 
+    //  NEW: Upload to Cloudinary
+    let imageUrl = null;
+
+    if (req.file) {
+      const result = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          { folder: "profile_images" },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        ).end(req.file.buffer);
+      });
+
+      imageUrl = result.secure_url;
+    }
+
     const user = await User.create({
       first_name,
       last_name,
@@ -65,7 +82,7 @@ async function signup(req, res, next) {
       phone: finalPhone,
       password_hash,
       city_id,
-      profile_image: profile_image || null,
+      profile_image: imageUrl, //  UPDATED
       role: role || "user"
     });
 
@@ -90,165 +107,164 @@ async function signup(req, res, next) {
     next(err);
   }
 }
-
-// ================= SIGN IN =================
-async function signin(req, res, next) {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password)
-      return res.status(400).json({ message: 'Email and password required' });
-
-    const user = await User.findOne({ where: { email } });
-    if (!user) return res.status(401).json({ message: 'Invalid credentials' });
-
-    const ok = await comparePassword(password, user.password_hash);
-    if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
-
-    const token = signToken({ id: user.id, email: user.email, role: user.role });
-
-    res.json({
-      success: true,
-      token,
-      user: {
-        id: user.id,
-        full_name: user.full_name,
-        email: user.email,
-        city_id: user.city_id,
-        role: user.role
-      }
-    });
-  } catch (err) {
-    next(err);
-  }
-}
-
-// ================= SEND RESET CODE =================
-async function sendResetCode(req, res, next) {
-  try {
-    const { email } = req.body;
-    if (!email)
-      return res.status(400).json({ message: "Email is required" });
-
-    const user = await User.findOne({ where: { email } });
-    if (!user)
-      return res.status(404).json({ message: "No user found with this email" });
-
-    // Generate OTP
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiry = new Date(Date.now() + 10 * 60 * 1000);
-
-    user.reset_code = code;
-    user.reset_code_expiry = expiry;
-    await user.save();
-
-    // ================= SEND EMAIL =================
+  // ================= SIGN IN =================
+  async function signin(req, res, next) {
     try {
-      const info = await transporter.sendMail({
-        from: `"Event App" <${process.env.EMAIL_USER}>`,
-        to: user.email,
-        subject: "Your Password Reset Code",
-        text: `Your OTP for password reset is ${code}. It will expire in 10 minutes.`,
-        html: `
+      const { email, password } = req.body;
+      if (!email || !password)
+        return res.status(400).json({ message: 'Email and password required' });
+
+      const user = await User.findOne({ where: { email } });
+      if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+
+      const ok = await comparePassword(password, user.password_hash);
+      if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
+
+      const token = signToken({ id: user.id, email: user.email, role: user.role });
+
+      res.json({
+        success: true,
+        token,
+        user: {
+          id: user.id,
+          full_name: user.full_name,
+          email: user.email,
+          city_id: user.city_id,
+          role: user.role
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // ================= SEND RESET CODE =================
+  async function sendResetCode(req, res, next) {
+    try {
+      const { email } = req.body;
+      if (!email)
+        return res.status(400).json({ message: "Email is required" });
+
+      const user = await User.findOne({ where: { email } });
+      if (!user)
+        return res.status(404).json({ message: "No user found with this email" });
+
+      // Generate OTP
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiry = new Date(Date.now() + 10 * 60 * 1000);
+
+      user.reset_code = code;
+      user.reset_code_expiry = expiry;
+      await user.save();
+
+      // ================= SEND EMAIL =================
+      try {
+        const info = await transporter.sendMail({
+          from: `"Event App" <${process.env.EMAIL_USER}>`,
+          to: user.email,
+          subject: "Your Password Reset Code",
+          text: `Your OTP for password reset is ${code}. It will expire in 10 minutes.`,
+          html: `
           <h3>Password Reset</h3>
           <p>Your OTP is:</p>
           <h2>${code}</h2>
           <p>This code will expire in 10 minutes.</p>
         `
+        });
+
+        console.log("✅ Email sent successfully");
+        console.log("📧 Message ID:", info.messageId);
+        console.log("📨 Accepted:", info.accepted);
+        console.log("📭 Rejected:", info.rejected);
+
+      } catch (mailError) {
+        console.error("❌ Email send failed:", mailError);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to send reset email"
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: "Reset code sent successfully",
+        email: user.email
       });
 
-      console.log("✅ Email sent successfully");
-      console.log("📧 Message ID:", info.messageId);
-      console.log("📨 Accepted:", info.accepted);
-      console.log("📭 Rejected:", info.rejected);
-
-    } catch (mailError) {
-      console.error("❌ Email send failed:", mailError);
-      return res.status(500).json({
-        success: false,
-        message: "Failed to send reset email"
-      });
+    } catch (err) {
+      next(err);
     }
-
-    return res.json({
-      success: true,
-      message: "Reset code sent successfully",
-      email: user.email
-    });
-
-  } catch (err) {
-    next(err);
   }
-}
 
-// ================= VERIFY CODE =================
-async function verifyResetCode(req, res, next) {
-  try {
-    const { email, code } = req.body;
-    if (!email || !code)
-      return res.status(400).json({ message: "Email and code are required" });
+  // ================= VERIFY CODE =================
+  async function verifyResetCode(req, res, next) {
+    try {
+      const { email, code } = req.body;
+      if (!email || !code)
+        return res.status(400).json({ message: "Email and code are required" });
 
-    const user = await User.findOne({ where: { email } });
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
+      const user = await User.findOne({ where: { email } });
+      if (!user)
+        return res.status(404).json({ message: "User not found" });
 
-    if (!user.reset_code || !user.reset_code_expiry)
-      return res.status(400).json({ message: "No reset code found" });
+      if (!user.reset_code || !user.reset_code_expiry)
+        return res.status(400).json({ message: "No reset code found" });
 
-    if (user.reset_code !== code)
-      return res.status(400).json({ message: "Invalid code" });
+      if (user.reset_code !== code)
+        return res.status(400).json({ message: "Invalid code" });
 
-    if (new Date() > user.reset_code_expiry)
-      return res.status(400).json({ message: "Code expired" });
+      if (new Date() > user.reset_code_expiry)
+        return res.status(400).json({ message: "Code expired" });
 
-    user.reset_code = "VERIFIED";
-    user.reset_code_expiry = null;
-    await user.save();
+      user.reset_code = "VERIFIED";
+      user.reset_code_expiry = null;
+      await user.save();
 
-    return res.json({
-      success: true,
-      message: "Code verified successfully"
-    });
+      return res.json({
+        success: true,
+        message: "Code verified successfully"
+      });
 
-  } catch (err) {
-    next(err);
+    } catch (err) {
+      next(err);
+    }
   }
-}
 
-// ================= RESET PASSWORD =================
-async function resetPassword(req, res, next) {
-  try {
-    const { email, newPassword } = req.body;
-    if (!email || !newPassword)
-      return res.status(400).json({ message: "Email and newPassword required" });
+  // ================= RESET PASSWORD =================
+  async function resetPassword(req, res, next) {
+    try {
+      const { email, newPassword } = req.body;
+      if (!email || !newPassword)
+        return res.status(400).json({ message: "Email and newPassword required" });
 
-    const user = await User.findOne({ where: { email } });
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
+      const user = await User.findOne({ where: { email } });
+      if (!user)
+        return res.status(404).json({ message: "User not found" });
 
-    if (user.reset_code !== "VERIFIED")
-      return res.status(400).json({ message: "Code not verified" });
+      if (user.reset_code !== "VERIFIED")
+        return res.status(400).json({ message: "Code not verified" });
 
-    const newHash = await hashPassword(newPassword);
-    user.password_hash = newHash;
-    user.reset_code = null;
-    user.reset_code_expiry = null;
-    await user.save();
+      const newHash = await hashPassword(newPassword);
+      user.password_hash = newHash;
+      user.reset_code = null;
+      user.reset_code_expiry = null;
+      await user.save();
 
-    return res.json({
-      success: true,
-      message: "Password reset successfully"
-    });
+      return res.json({
+        success: true,
+        message: "Password reset successfully"
+      });
 
-  } catch (err) {
-    next(err);
+    } catch (err) {
+      next(err);
+    }
   }
-}
 
-// ================= EXPORT =================
-module.exports = {
-  signup,
-  signin,
-  sendResetCode,
-  verifyResetCode,
-  resetPassword
-};
+  // ================= EXPORT =================
+  module.exports = {
+    signup,
+    signin,
+    sendResetCode,
+    verifyResetCode,
+    resetPassword
+  };
