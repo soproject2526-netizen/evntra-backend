@@ -9,16 +9,7 @@ if (!fs.existsSync(EVENTS_UPLOAD_DIR)) {
   fs.mkdirSync(EVENTS_UPLOAD_DIR, { recursive: true });
 }
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, EVENTS_UPLOAD_DIR);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName =
-      `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
-  }
-});
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith("image") || file.mimetype.startsWith("video")) {

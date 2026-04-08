@@ -4,6 +4,7 @@ const { User } = require('../models');
 const { hashPassword, comparePassword } = require('../../utils/hash');
 const { signToken } = require('../../utils/jwt');
 const nodemailer = require('nodemailer');
+const cloudinary = require('../config/cloudinary');
 
 // ================= EMAIL TRANSPORTER =================
 const transporter = nodemailer.createTransport({
@@ -37,7 +38,6 @@ async function signup(req, res, next) {
       password,
       confirm_password,
       city_id,
-      profile_image,
       role
     } = req.body;
 
