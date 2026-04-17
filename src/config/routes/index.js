@@ -21,6 +21,7 @@ router.use('/events', require('./interactionRoutes'));
  * MEDIA (if used separately)
  */
 router.use('/media', require('./mediaRoutes'));
+router.use("/event-tickets", require('./eventTicketsRoutes'));
 
 /**
  * DASHBOARD
