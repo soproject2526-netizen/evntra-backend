@@ -20,13 +20,13 @@ async function selectCity(req, res, next) {
     // await req.user.save();
 
     // Fetch logged-in user from DB (req.user is JWT payload)
-const user = await User.findByPk(req.user.id);
+    const user = await User.findByPk(req.user.id);
 
-if (!user)
-  return res.status(404).json({ message: 'User not found' });
+    if (!user)
+      return res.status(404).json({ message: 'User not found' });
 
-user.city_id = city_id;
-await user.save();
+    user.city_id = city_id;
+    await user.save();
 
 
 
@@ -46,4 +46,277 @@ await user.save();
   }
 }
 
-module.exports = { selectCity };
+// User Profile
+
+async function getUserProfile(req, res, next) {
+  try {
+    const userId = req.user.id;
+
+    const user = await User.findByPk(userId, {
+      attributes: [
+        "id",
+        "first_name",
+        "last_name",
+        "full_name",
+        "email",
+        "phone",
+        "city_id",
+        "profile_image",
+      ],
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const host = req.protocol + "://" + req.get("host"); // http://localhost:4000
+
+    const profileImageUrl = user.profile_image
+      ? `${host}/${user.profile_image.replace(/\\/g, "/")}`
+      : null;
+
+    return res.json({
+      success: true,
+      data: {
+        ...user.dataValues,
+        profile_image: profileImageUrl,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function updateUserProfile(req, res, next) {
+  try {
+    const userId = req.user.id;
+
+    // profile_image now comes from multer
+    const profile_image = req.file ? req.file.path : req.body.profile_image;
+
+    const { first_name, last_name, phone, city_id, email } = req.body;
+
+    if (!first_name || !last_name) {
+      return res.status(400).json({
+        success: false,
+        message: "First name and last name are required",
+      });
+    }
+
+    const full_name = `${first_name} ${last_name}`;
+
+    const [updated] = await User.update(
+      {
+        first_name,
+        last_name,
+        full_name,
+        email,
+        phone,
+        city_id,
+        profile_image,
+      },
+      {
+        where: { id: userId },
+      },
+    );
+
+    if (!updated) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    const updatedUser = await User.findOne({
+      where: { id: userId },
+      attributes: [
+        "id",
+        "first_name",
+        "last_name",
+        "full_name",
+        "email",
+        "phone",
+        "city_id",
+        "profile_image",
+      ],
+    });
+
+    // ✅ Convert profile_image to full URL
+    const host = req.protocol + "://" + req.get("host");
+    const profileImageUrl = updatedUser.profile_image
+      ? `${host}/${updatedUser.profile_image.replace(/\\/g, "/")}`
+      : null;
+
+    return res.json({
+      success: true,
+      message: "Profile updated successfully",
+      data: {
+        ...updatedUser.dataValues,
+        profile_image: profileImageUrl,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getUserProfileStats(req, res) {
+  try {
+    const userId = req.user.id;
+
+    //  Fetch all orders of user with event info
+    const orders = await Order.findAll({
+      where: { user_id: userId },
+      include: [
+        {
+          model: Event,
+          as: "event",
+          attributes: ["id", "title", "start_time"],
+        },
+      ],
+      order: [["id", "DESC"]],
+    });
+
+    //  Tickets (each order = ticket)
+
+    const tickets = orders.map((o) => ({
+      ticketId: o.id,
+      eventId: o.event_id,
+      eventTitle: o.event?.title || "",
+      price: Number(o.total_price),
+      quantity: o.quantity,
+      status: o.attendance_status,
+    }));
+
+    //  Total tickets purchased
+
+    const ticketsPurchased = orders.reduce(
+      (sum, o) => sum + (o.quantity || 0),
+      0,
+    );
+
+    //  Total spent
+
+    const totalSpent = orders.reduce(
+      (sum, o) => sum + Number(o.total_price || 0),
+      0,
+    );
+
+    const normalizeStatus = (status) => (status || "").toLowerCase().trim();
+
+    //  BOOKED EVENTS (group by event)
+
+    const bookedOrders = orders.filter(
+      (o) => normalizeStatus(o.attendance_status) === "booked",
+    );
+
+    const bookedEventsMap = new Map();
+
+    bookedOrders.forEach((o) => {
+      if (!o.event) return; // 🔥 skip broken relation
+
+      if (!bookedEventsMap.has(o.event_id)) {
+        bookedEventsMap.set(o.event_id, {
+          id: o.event.id,
+          title: o.event.title,
+          date: o.event.start_time,
+          status: "Upcoming",
+          ticketCount: o.quantity,
+        });
+      } else {
+        bookedEventsMap.get(o.event_id).ticketCount += o.quantity;
+      }
+    });
+
+    orders.forEach((o) => {
+      console.log(o.id, o.attendance_status, o.event?.title);
+    });
+
+    const bookedEvents = Array.from(bookedEventsMap.values());
+
+    // ATTENDED EVENTS (group by event)
+
+    const attendedOrders = orders.filter(
+      (o) => normalizeStatus(o.attendance_status) === "attended",
+    );
+
+    const attendedEventsMap = new Map();
+
+    attendedOrders.forEach((o) => {
+      if (!o.event) return;
+
+      if (!attendedEventsMap.has(o.event_id)) {
+        attendedEventsMap.set(o.event_id, {
+          id: o.event.id,
+          title: o.event.title,
+          date: o.event.start_time,
+        });
+      }
+    });
+
+    const attendedEvents = Array.from(attendedEventsMap.values());
+
+    // FINAL RESPONSE
+
+    return res.json({
+      success: true,
+      data: {
+        bookedEventsCount: bookedEvents.length,
+        ticketsPurchased,
+        eventsAttended: attendedEvents.length,
+        totalSpent,
+        bookedEvents,
+        tickets,
+        attendedEvents,
+      },
+    });
+  } catch (error) {
+    console.error("User profile stats error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch user profile stats",
+      error: error.message,
+    });
+  }
+}
+
+async function getAllUsers(req, res) {
+  try {
+    const users = await User.findAll({
+      attributes: [
+        "id",
+        "first_name",
+        "last_name",
+        "full_name",
+        "email",
+        "phone",
+        "role",
+        "is_verified",
+        "created_at",
+      ],
+      order: [["created_at", "DESC"]],
+    });
+
+    return res.json({
+      success: true,
+      totalUsers: users.length,
+      data: users,
+    });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch users",
+    });
+  }
+}
+
+module.exports = {
+  selectCity, getUserProfile,
+  updateUserProfile,
+  getUserProfileStats,
+  getAllUsers
+};

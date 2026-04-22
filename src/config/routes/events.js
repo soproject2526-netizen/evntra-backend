@@ -27,4 +27,5 @@ router.get('/:id',getEventDetail);
 // Update event media
 router.put("/events/:id",eventController.updateEventMedia);
 router.post("/events/upload-media",upload.single("media"),eventController.uploadEventMedia);
+
 module.exports = router;

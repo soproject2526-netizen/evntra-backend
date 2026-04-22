@@ -1,7 +1,7 @@
 // src/routes/interactionRoutes.js
 const express = require('express');
 const router = express.Router();
-const auth = require('../../middleware/authMiddleware');
+const auth = require('../../middleware/requireAuth');
 // create requireAuth to enforce login
 const {
   toggleLike,
@@ -11,7 +11,7 @@ const {
   createComment
 } = require('../controllers/interactionController');
 
-router.post('/:id/like', toggleLike);
+router.post('/:id/like', auth, toggleLike);
 router.post('/:id/favorite', auth, toggleFavorite);
 router.post('/:id/share', logShare); 
 

@@ -31,7 +31,7 @@ module.exports = {
    */
   async getCalendarEvents(req, res) {
     try {
-      const { city_id, from_date, to_date } = req.query;
+      const { city_id, date_from, date_to } = req.query;
 
       const where = {
         status: "published",
@@ -42,11 +42,11 @@ module.exports = {
       }
 
       // ✅ FIX: USE start_time
-      if (from_date && to_date) {
+      if (date_from && date_to) {
         where.start_time = {
           [Op.between]: [
-            startOfDay(from_date),
-            endOfDay(to_date),
+            startOfDay(date_from),
+            endOfDay(date_to),
           ],
         };
       }
