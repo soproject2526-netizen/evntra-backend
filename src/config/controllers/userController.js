@@ -1,18 +1,19 @@
-const { City, User } = require("../models");
+const { City, User } = require('../models');
 
 async function selectCity(req, res, next) {
   try {
     const { city_id } = req.body;
 
     if (!city_id)
-      return res.status(400).json({ message: "city_id is required" });
+      return res.status(400).json({ message: 'city_id is required' });
 
     // Check city exists & active
     const city = await City.findOne({
-      where: { id: city_id, is_active: true },
+      where: { id: city_id, is_active: true }
     });
 
-    if (!city) return res.status(404).json({ message: "City not found" });
+    if (!city)
+      return res.status(404).json({ message: 'City not found' });
 
     // Save selected city to logged-in user
     // req.user.city_id = city_id;
@@ -21,21 +22,25 @@ async function selectCity(req, res, next) {
     // Fetch logged-in user from DB (req.user is JWT payload)
     const user = await User.findByPk(req.user.id);
 
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user)
+      return res.status(404).json({ message: 'User not found' });
 
     user.city_id = city_id;
     await user.save();
 
+
+
     return res.json({
       success: true,
-      message: "City selected successfully",
+      message: 'City selected successfully',
       city: {
         id: city.id,
         name: city.name,
         state: city.state,
-        slug: city.slug,
-      },
+        slug: city.slug
+      }
     });
+
   } catch (err) {
     next(err);
   }
@@ -67,9 +72,10 @@ async function getUserProfile(req, res, next) {
       });
     }
 
-    const host = req.protocol + "://" + req.get("host"); // http://localhost:4000
+    const host = req.protocol + "://" + req.get("host"); 
 
-    const profileImageUrl = user.profile_image
+    
+const profileImageUrl = user.profile_image
       ? `${host}/${user.profile_image.replace(/\\/g, "/")}`
       : null;
 
@@ -89,11 +95,6 @@ async function updateUserProfile(req, res, next) {
   try {
     const userId = req.user.id;
 
-    // profile_image now comes from multer
-    const profile_image = req.file
-      ? `${req.protocol}://${req.get("host")}/${req.file.path.replace(/\\/g, "/")}`
-      : req.body.profile_image;
-
     const { first_name, last_name, phone, city_id, email } = req.body;
 
     if (!first_name || !last_name) {
@@ -103,58 +104,48 @@ async function updateUserProfile(req, res, next) {
       });
     }
 
-    const full_name = `${first_name} ${last_name}`;
+    const user = await User.findByPk(userId);
 
-    const [updated] = await User.update(
-      {
-        first_name,
-        last_name,
-        full_name,
-        email,
-        phone,
-        city_id,
-        profile_image,
-      },
-      {
-        where: { id: userId },
-      },
-    );
-
-    if (!updated) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
-    const updatedUser = await User.findOne({
-      where: { id: userId },
-      attributes: [
-        "id",
-        "first_name",
-        "last_name",
-        "full_name",
-        "email",
-        "phone",
-        "city_id",
-        "profile_image",
-      ],
+    let profile_image = user.profile_image; // ✅ KEEP OLD IMAGE
+
+    // ✅ ONLY UPDATE IF FILE IS SENT
+    if (req.file && req.file.path) {
+      profile_image = `${req.protocol}://${req.get("host")}/${req.file.path.replace(/\\/g, "/")}`;
+    }
+
+    const full_name = `${first_name} ${last_name}`;
+
+    await user.update({
+      first_name,
+      last_name,
+      full_name,
+      email,
+      phone,
+      city_id,
+      profile_image,
     });
 
-    // ✅ Convert profile_image to full URL
-    const host = req.protocol + "://" + req.get("host");
-    const profileImageUrl = updatedUser.profile_image
-      ? `${host}/${updatedUser.profile_image.replace(/\\/g, "/")}`
-      : null;
+    
+    const profileImageUrl = profile_image ? profile_image: null;
 
     return res.json({
       success: true,
       message: "Profile updated successfully",
       data: {
-        ...updatedUser.dataValues,
+        ...user.dataValues,
         profile_image: profileImageUrl,
       },
     });
+
   } catch (err) {
+    console.error("UPDATE PROFILE ERROR:", err);
     next(err);
   }
 }
@@ -312,9 +303,8 @@ async function getAllUsers(req, res) {
 }
 
 module.exports = {
-  selectCity,
-  getUserProfile,
+  selectCity, getUserProfile,
   updateUserProfile,
   getUserProfileStats,
-  getAllUsers,
+  getAllUsers
 };
