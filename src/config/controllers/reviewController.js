@@ -149,7 +149,7 @@ async function getPendingReviews(req, res) {
 
     return res.json({
       success: true,
-      pending_reviews: pending,
+      reviews: pending,
     });
   } catch (error) {
     console.error("PENDING REVIEWS ERROR:", error);
