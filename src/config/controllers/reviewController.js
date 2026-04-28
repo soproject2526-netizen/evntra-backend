@@ -138,6 +138,7 @@ async function getPendingReviews(req, res) {
       LEFT JOIN reviews r 
         ON r.event_id = e.id AND r.user_id = b.user_id
       WHERE b.user_id = :user_id
+      AND b.status = 'attended'
       AND e.status = 'completed'
       AND r.id IS NULL
       `,
