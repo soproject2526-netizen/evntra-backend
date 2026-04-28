@@ -104,7 +104,7 @@ async function getEventReviews(req, res) {
         {
           model: User,
           as: "user",
-          attributes: ["id", "full_name", "avatar_url"],
+          attributes: ["id", "full_name", "profile_image"],
         },
       ],
       order: [["created_at", "DESC"]],
