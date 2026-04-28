@@ -8,7 +8,6 @@ async function createReview(req, res) {
     const user_id = req.user.id;
     const { event_id, rating, comment } = req.body;
 
-    // 1. Validate
     if (!event_id || !rating || !comment) {
       await transaction.rollback();
       return res.status(400).json({
@@ -25,9 +24,7 @@ async function createReview(req, res) {
       });
     }
 
-    // 2. Get event
     const event = await Event.findByPk(event_id);
-
     if (!event) {
       await transaction.rollback();
       return res.status(404).json({
@@ -36,7 +33,6 @@ async function createReview(req, res) {
       });
     }
 
-    // 3. Check duplicate review
     const existing = await Review.findOne({
       where: { user_id, event_id },
     });
@@ -49,7 +45,6 @@ async function createReview(req, res) {
       });
     }
 
-    // 4. Create review
     const review = await Review.create(
       {
         user_id,
@@ -61,9 +56,7 @@ async function createReview(req, res) {
       { transaction },
     );
 
-    // 🔥 5. UPDATE EVENT RATING
     const newTotal = event.total_reviews + 1;
-
     const newAverage =
       (event.average_rating * event.total_reviews + rating) / newTotal;
 
@@ -84,9 +77,7 @@ async function createReview(req, res) {
     });
   } catch (error) {
     await transaction.rollback();
-
     console.error("REVIEW ERROR:", error);
-
     return res.status(500).json({
       success: false,
       message: "Failed to create review",
@@ -100,7 +91,6 @@ async function getEventReviews(req, res) {
     const { eventId } = req.params;
 
     const event = await Event.findByPk(eventId);
-
     if (!event) {
       return res.status(404).json({
         success: false,
@@ -128,7 +118,6 @@ async function getEventReviews(req, res) {
     });
   } catch (error) {
     console.error("GET REVIEWS ERROR:", error);
-
     return res.status(500).json({
       success: false,
       message: "Failed to fetch reviews",
@@ -136,8 +125,7 @@ async function getEventReviews(req, res) {
   }
 }
 
-
-// ✅ PENDING REVIEWS (FOR DASHBOARD POPUP)
+// ✅ PENDING REVIEWS
 async function getPendingReviews(req, res) {
   try {
     const user_id = req.user.id;
@@ -165,7 +153,6 @@ async function getPendingReviews(req, res) {
     });
   } catch (error) {
     console.error("PENDING REVIEWS ERROR:", error);
-
     return res.status(500).json({
       success: false,
       message: "Failed to fetch pending reviews",
