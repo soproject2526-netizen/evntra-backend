@@ -1,19 +1,18 @@
-const { City, User ,order} = require('../models');
+const { City, User, order } = require("../models");
 
 async function selectCity(req, res, next) {
   try {
     const { city_id } = req.body;
 
     if (!city_id)
-      return res.status(400).json({ message: 'city_id is required' });
+      return res.status(400).json({ message: "city_id is required" });
 
     // Check city exists & active
     const city = await City.findOne({
-      where: { id: city_id, is_active: true }
+      where: { id: city_id, is_active: true },
     });
 
-    if (!city)
-      return res.status(404).json({ message: 'City not found' });
+    if (!city) return res.status(404).json({ message: "City not found" });
 
     // Save selected city to logged-in user
     // req.user.city_id = city_id;
@@ -22,25 +21,21 @@ async function selectCity(req, res, next) {
     // Fetch logged-in user from DB (req.user is JWT payload)
     const user = await User.findByPk(req.user.id);
 
-    if (!user)
-      return res.status(404).json({ message: 'User not found' });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     user.city_id = city_id;
     await user.save();
 
-
-
     return res.json({
       success: true,
-      message: 'City selected successfully',
+      message: "City selected successfully",
       city: {
         id: city.id,
         name: city.name,
         state: city.state,
-        slug: city.slug
-      }
+        slug: city.slug,
+      },
     });
-
   } catch (err) {
     next(err);
   }
@@ -72,12 +67,9 @@ async function getUserProfile(req, res, next) {
       });
     }
 
-    const host = req.protocol + "://" + req.get("host"); 
+    const host = req.protocol + "://" + req.get("host");
 
-    
-const profileImageUrl = user.profile_image
-      ? `${host}/${user.profile_image.replace(/\\/g, "/")}`
-      : null;
+    const profileImageUrl = user.profile_image || null;
 
     return res.json({
       success: true,
@@ -104,6 +96,8 @@ async function updateUserProfile(req, res, next) {
       });
     }
 
+    const full_name = `${first_name} ${last_name}`;
+
     const user = await User.findByPk(userId);
 
     if (!user) {
@@ -113,14 +107,12 @@ async function updateUserProfile(req, res, next) {
       });
     }
 
-    let profile_image = user.profile_image; // ✅ KEEP OLD IMAGE
+    let profile_image = user.profile_image;
 
-    // ✅ ONLY UPDATE IF FILE IS SENT
-    if (req.file && req.file.path) {
-      profile_image = `${req.protocol}://${req.get("host")}/${req.file.path.replace(/\\/g, "/")}`;
+    if (req.file) {
+      profile_image = req.file.path;
+      L;
     }
-
-    const full_name = `${first_name} ${last_name}`;
 
     await user.update({
       first_name,
@@ -132,20 +124,15 @@ async function updateUserProfile(req, res, next) {
       profile_image,
     });
 
-    
-    const profileImageUrl = profile_image ? profile_image: null;
-
     return res.json({
       success: true,
       message: "Profile updated successfully",
       data: {
         ...user.dataValues,
-        profile_image: profileImageUrl,
+        profile_image: user.profile_image || null,
       },
     });
-
   } catch (err) {
-    console.error("UPDATE PROFILE ERROR:", err);
     next(err);
   }
 }
@@ -303,8 +290,9 @@ async function getAllUsers(req, res) {
 }
 
 module.exports = {
-  selectCity, getUserProfile,
+  selectCity,
+  getUserProfile,
   updateUserProfile,
   getUserProfileStats,
-  getAllUsers
+  getAllUsers,
 };
