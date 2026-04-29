@@ -111,7 +111,6 @@ async function updateUserProfile(req, res, next) {
 
     if (req.file) {
       profile_image = req.file.path;
-      L;
     }
 
     await user.update({
