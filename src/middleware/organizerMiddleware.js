@@ -1,17 +1,17 @@
 const { sequelize, Sequelize } = require("../models");
 
 module.exports = async (req, res, next) => {
+  console.log("USER ID:", req.user.id);
+
   const organizer = await sequelize.query(
-    `SELECT * FROM organizers
-     WHERE user_id = :uid
-     AND approval_status = 'APPROVED'
-     AND is_active = 1
-     LIMIT 1`,
+    `SELECT * FROM organizers WHERE user_id = :uid`,
     {
       replacements: { uid: req.user.id },
       type: Sequelize.QueryTypes.SELECT,
     },
   );
+
+  console.log("ORG RESULT:", organizer);
 
   if (!organizer.length) {
     return res.status(403).json({
