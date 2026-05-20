@@ -44,4 +44,12 @@ router.use("/reviews", require("./reviewRoutes"));
  */
 router.use("/event-tickets", require("./eventTicketsRoutes"));
 
+/**
+ * ORGANIZER DASHBOARD ROUTES ✅
+ */
+router.use(
+  "/organizer/dashboard",
+  require("./organizer/organizerDashboardRoutes"),
+);
+
 module.exports = router;
