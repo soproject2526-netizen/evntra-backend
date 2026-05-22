@@ -14,7 +14,7 @@ exports.getDashboardOverview = async (req, res) => {
 
     const events = await Event.findAll({
       where: { user_id: organizerId },
-      attributes: ["id", "status", "start_date", "end_date"],
+      attributes: ["id", "status", "start_time", "end_time"],
       raw: true,
     });
 
@@ -60,8 +60,8 @@ exports.getDashboardOverview = async (req, res) => {
     const now = new Date();
 
     const activeEventsCount = events.filter((e) => {
-      const start = new Date(e.start_date);
-      const end = new Date(e.end_date);
+      const start = new Date(e.start_time);
+      const end = new Date(e.end_time);
 
       return (
         e.status === "ACTIVE" ||
