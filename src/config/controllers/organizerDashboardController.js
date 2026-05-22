@@ -13,7 +13,7 @@ exports.getDashboardOverview = async (req, res) => {
     const organizerId = req.user.id;
 
     const events = await Event.findAll({
-      where: { user_id: organizerId },
+      where: { organizer_id: organizerId },
       attributes: ["id", "status", "start_time", "end_time"],
       raw: true,
     });
@@ -99,7 +99,7 @@ exports.getOrganizerEvents = async (req, res) => {
 
     const { rows: events, count } = await Event.findAndCountAll({
       where: {
-        user_id: userId,
+        organizer_id: userId,
         status: { [Op.in]: ["PENDING", "APPROVED", "ACTIVE", "REJECTED"] },
       },
       include: [
@@ -250,7 +250,7 @@ exports.getOrganizerBookings = async (req, res) => {
         {
           model: Event,
           as: "event",
-          where: { user_id: organizerId },
+          where: { organizer_id: organizerId },
           attributes: ["id", "title"],
         },
       ],
@@ -295,8 +295,8 @@ exports.getEventBookings = async (req, res) => {
         {
           model: Event,
           as: "event",
-          attributes: ["id", "title", "venue_name", "user_id"],
-          where: { user_id: organizerId },
+          attributes: ["id", "title", "venue_name", "organizer_id"],
+          where: { organizer_id: organizerId },
           required: true,
           include: [
             {
@@ -367,7 +367,7 @@ exports.getOrganizerRevenue = async (req, res) => {
         {
           model: Event,
           as: "event",
-          where: { user_id: organizerId },
+          where: { organizer_id: organizerId },
           attributes: [],
         },
       ],
