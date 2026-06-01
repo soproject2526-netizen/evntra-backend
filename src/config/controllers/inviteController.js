@@ -33,9 +33,7 @@ async function getInviteFriends(req, res, next) {
     const host = req.protocol + "://" + req.get("host");
 
     const data = users.map((user) => {
-      const profileImageUrl = user.profile_image
-        ? `${host}/${user.profile_image.replace(/\\/g, "/")}`
-        : null;
+      const profileImageUrl = user.profile_image || null;
 
       return {
         id: user.id,
