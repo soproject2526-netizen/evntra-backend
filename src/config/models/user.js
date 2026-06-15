@@ -35,9 +35,14 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
 
+      google_id: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+      },
+
       password_hash: {
         type: DataTypes.STRING(255),
-        allowNull: false,
+        allowNull: true,
       },
 
       role: {

@@ -111,26 +111,31 @@ async function updateUserProfile(req, res, next) {
 
     if (req.file) {
       profile_image = req.file.path;
+      let profile_image = user.profile_image;
+
+      if (req.file) {
+        profile_image = req.file.path;
+      }
+
+      await user.update({
+        first_name,
+        last_name,
+        full_name,
+        email,
+        phone,
+        city_id,
+        profile_image,
+      });
+
+      return res.json({
+        success: true,
+        message: "Profile updated successfully",
+        data: {
+          ...user.dataValues,
+          profile_image: user.profile_image || null,
+        },
+      });
     }
-
-    await user.update({
-      first_name,
-      last_name,
-      full_name,
-      email,
-      phone,
-      city_id,
-      profile_image,
-    });
-
-    return res.json({
-      success: true,
-      message: "Profile updated successfully",
-      data: {
-        ...user.dataValues,
-        profile_image: user.profile_image || null,
-      },
-    });
   } catch (err) {
     next(err);
   }

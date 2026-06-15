@@ -1,10 +1,10 @@
-require("dotenv").config(); // ✅ MUST be on top
-
-const { User } = require("../models");
-const { hashPassword, comparePassword } = require("../../utils/hash");
-const { signToken } = require("../../utils/jwt");
-const nodemailer = require("nodemailer");
-const cloudinary = require("../cloudinary");
+require('dotenv').config(); // ✅ MUST be on top
+const { User } = require('../models');
+const { hashPassword, comparePassword } = require('../../utils/hash');
+const { signToken } = require('../../utils/jwt');
+const nodemailer = require('nodemailer');
+const cloudinary = require('../cloudinary');
+const { OAuth2Client } = require('google-auth-library');
 
 // ================= EMAIL TRANSPORTER =================
 const transporter = nodemailer.createTransport({
@@ -19,6 +19,70 @@ const transporter = nodemailer.createTransport({
     rejectUnauthorized: false, // ✅ FIX
   },
 });
+
+const googleClient = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID
+);
+
+async function googleLogin(req, res) {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({
+        success: false,
+        message: "Google token missing",
+      });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    const email = payload.email;
+    const fullName = payload.name;
+    const photo = payload.picture;
+
+    let user = await User.findOne({
+      where: { email },
+    });
+
+    if (!user) {
+      user = await User.create({
+        first_name: fullName,
+        last_name: "",
+        full_name: fullName,
+        email,
+        phone: null,
+        city_id: null,
+        profile_image: photo,
+        password_hash: "GOOGLE_LOGIN",
+      });
+    }
+
+    const token = signToken({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    return res.json({
+      success: true,
+      token,
+      user,
+    });
+  } catch (err) {
+    console.error(err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Google login failed",
+    });
+  }
+}
 
 // ================= VERIFY TRANSPORTER =================
 transporter.verify((error, success) => {
@@ -125,19 +189,15 @@ async function signin(req, res, next) {
   try {
     const { email, password } = req.body;
     if (!email || !password)
-      return res.status(400).json({ message: "Email and password required" });
+      return res.status(400).json({ message: 'Email and password required' });
 
     const user = await User.findOne({ where: { email } });
-    if (!user) return res.status(401).json({ message: "Invalid credentials" });
+    if (!user) return res.status(401).json({ message: 'Invalid credentials' });
 
     const ok = await comparePassword(password, user.password_hash);
-    if (!ok) return res.status(401).json({ message: "Invalid credentials" });
+    if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
 
-    const token = signToken({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    });
+    const token = signToken({ id: user.id, email: user.email, role: user.role });
 
     res.json({
       success: true,
@@ -147,8 +207,8 @@ async function signin(req, res, next) {
         full_name: user.full_name,
         email: user.email,
         city_id: user.city_id,
-        role: user.role,
-      },
+        role: user.role
+      }
     });
   } catch (err) {
     next(err);
@@ -159,7 +219,8 @@ async function signin(req, res, next) {
 async function sendResetCode(req, res, next) {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ message: "Email is required" });
+    if (!email)
+      return res.status(400).json({ message: "Email is required" });
 
     const user = await User.findOne({ where: { email } });
     if (!user)
@@ -185,26 +246,28 @@ async function sendResetCode(req, res, next) {
           <p>Your OTP is:</p>
           <h2>${code}</h2>
           <p>This code will expire in 10 minutes.</p>
-        `,
+        `
       });
 
       console.log("✅ Email sent successfully");
       console.log("📧 Message ID:", info.messageId);
       console.log("📨 Accepted:", info.accepted);
       console.log("📭 Rejected:", info.rejected);
+
     } catch (mailError) {
       console.error("❌ Email send failed:", mailError);
       return res.status(500).json({
         success: false,
-        message: "Failed to send reset email",
+        message: "Failed to send reset email"
       });
     }
 
     return res.json({
       success: true,
       message: "Reset code sent successfully",
-      email: user.email,
+      email: user.email
     });
+
   } catch (err) {
     next(err);
   }
@@ -218,7 +281,8 @@ async function verifyResetCode(req, res, next) {
       return res.status(400).json({ message: "Email and code are required" });
 
     const user = await User.findOne({ where: { email } });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user)
+      return res.status(404).json({ message: "User not found" });
 
     if (!user.reset_code || !user.reset_code_expiry)
       return res.status(400).json({ message: "No reset code found" });
@@ -235,8 +299,9 @@ async function verifyResetCode(req, res, next) {
 
     return res.json({
       success: true,
-      message: "Code verified successfully",
+      message: "Code verified successfully"
     });
+
   } catch (err) {
     next(err);
   }
@@ -247,12 +312,11 @@ async function resetPassword(req, res, next) {
   try {
     const { email, newPassword } = req.body;
     if (!email || !newPassword)
-      return res
-        .status(400)
-        .json({ message: "Email and newPassword required" });
+      return res.status(400).json({ message: "Email and newPassword required" });
 
     const user = await User.findOne({ where: { email } });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user)
+      return res.status(404).json({ message: "User not found" });
 
     if (user.reset_code !== "VERIFIED")
       return res.status(400).json({ message: "Code not verified" });
@@ -265,8 +329,9 @@ async function resetPassword(req, res, next) {
 
     return res.json({
       success: true,
-      message: "Password reset successfully",
+      message: "Password reset successfully"
     });
+
   } catch (err) {
     next(err);
   }
@@ -276,6 +341,7 @@ async function resetPassword(req, res, next) {
 module.exports = {
   signup,
   signin,
+  googleLogin,
   sendResetCode,
   verifyResetCode,
   resetPassword,
