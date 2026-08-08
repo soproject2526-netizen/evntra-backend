@@ -2,8 +2,8 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cloudinary = require('../cloudinary');
+//const { CloudinaryStorage } = require('multer-storage-cloudinary');
+//const cloudinary = require('../cloudinary');
 const path = require("path");
 const eventController = require("../controllers/eventController");
 const eventsController = require("../controllers/eventsController");
@@ -11,32 +11,53 @@ const { getEventDetail } = require("../controllers/eventDetailController");
 const requireAuth = require("../../middleware/requireAuth");
 const authOptional = require("../../middleware/authOptional");
 
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'events',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'mp4'],
-  },
-});
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
+  try {
+    const allowedMimeTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
 
-  const allowedExtensions = [
-    ".jpg",
-    ".jpeg",
-    ".png",
-    ".webp",
-    ".mp4",
-    ".mov",
-    ".mkv"
-  ];
+      "video/mp4",
+      "video/quicktime",
+      "video/x-matroska",
+    ];
 
-  const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExtensions = [
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".webp",
+      ".mp4",
+      ".mov",
+      ".mkv",
+    ];
 
-  if (allowedExtensions.includes(ext)) {
+    const extension = path
+      .extname(file.originalname)
+      .toLowerCase();
+
+    const mimeAllowed = allowedMimeTypes.includes(
+      file.mimetype
+    );
+
+    const extensionAllowed =
+      allowedExtensions.includes(extension);
+
+    if (!mimeAllowed || !extensionAllowed) {
+      return cb(
+        new Error(
+          "Unsupported media format. Please upload JPG, JPEG, PNG, WEBP, MP4, MOV or MKV."
+        ),
+        false
+      );
+    }
+
     cb(null, true);
-  } else {
-    cb(new Error("Only images and videos are allowed"), false);
+  } catch (error) {
+    cb(error, false);
   }
 };
 
@@ -50,21 +71,21 @@ const upload = multer({
 });
 
 // Create event
-router.post("/",upload.array("media", 10),requireAuth,eventController.createEvent);
+router.post("/", upload.array("media", 10), requireAuth, eventController.createEvent);
 
 // Became Organizer
-router.post("/become-organizer",requireAuth, eventController.becomeOrganizer);
+router.post("/become-organizer", requireAuth, eventController.becomeOrganizer);
 
 // List all events
-router.get("/",authOptional,eventsController.listEvents);
+router.get("/", authOptional, eventsController.listEvents);
 
 // Single Detail Event 
 router.get("/:id", authOptional, getEventDetail);
 
 // Upload media file
-router.post("/upload-media",upload.single("media"),eventController.uploadEventMedia);
+router.post("/upload-media", upload.single("media"), eventController.uploadEventMedia);
 
 // Update primary media for an event
-router.put("/:id",upload.single("media"),eventController.updateEventMedia);
+router.put( "/:id", upload.array("media", 10),eventController.updateEventMedia);
 
 module.exports = router;

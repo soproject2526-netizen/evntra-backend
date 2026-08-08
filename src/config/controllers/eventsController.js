@@ -122,7 +122,7 @@ async function listEvents(req, res, next) {
           'duration_seconds',
           'storage_filename',
           'original_filename',
-          'url' 
+          'url'
         ]
 
       }
@@ -225,12 +225,15 @@ async function listEvents(req, res, next) {
         city_id: evJs.city_id,
         venue_name: evJs.venue_name,
         price: evJs.price,
+        address: evJs.address,
+        lat: evJs.lat != null ? Number(evJs.lat) : null,
+        lng: evJs.lng != null ? Number(evJs.lng) : null,
         is_free: !!evJs.is_free,
         likes_count: parseInt(evJs.likes_count || 0, 10),
         comments_count: parseInt(evJs.comments_count || 0, 10),
         is_liked_by_user: !!parseInt(evJs.is_liked_by_user || 0, 10),
         primary_media,
-        media, 
+        media,
         chat_room_id: null
       };
     });

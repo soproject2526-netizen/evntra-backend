@@ -20,7 +20,7 @@ async function getEventDetail(req, res, next) {
       where: { id: eventId, status: 'published' },
       attributes: [
         'id', 'title', 'description', 'start_time', 'end_time',
-        'city_id', 'venue_name', 'address',
+        'city_id', 'venue_name', 'address', 'lat', 'lng',
         'price', 'currency', 'is_free',
         'likes_count', 'comments_count', 'views_count'
       ],
@@ -114,7 +114,14 @@ async function getEventDetail(req, res, next) {
           name: event.city.name
         } : null,
         venue_name: event.venue_name,
-        address: event.address
+        address: event.address,
+        coordinates:
+          event.lat != null && event.lng != null
+            ? {
+              lat: Number(event.lat),
+              lng: Number(event.lng),
+            }
+            : null,
       },
       pricing: {
         is_free: !!event.is_free,
@@ -142,8 +149,8 @@ async function getEventDetail(req, res, next) {
         }
         : null,
       organizer_contact: {
-        phone: event.organizer.phone || null,
-        email: event.organizer.email || null
+        phone: event.organizer?.phone || null,
+        email: event.organizer?.email || null
       },
       members: {
         count: participantsCount,
