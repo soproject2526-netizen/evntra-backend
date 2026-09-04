@@ -1,4 +1,5 @@
 const { City, User, order } = require("../models");
+const cloudinary = require("../cloudinary");
 
 async function selectCity(req, res, next) {
   try {
@@ -83,20 +84,64 @@ async function getUserProfile(req, res, next) {
   }
 }
 
+
 async function updateUserProfile(req, res, next) {
   try {
-    const userId = req.user.id;
+    console.log("========================================");
+    console.log("📥 PROFILE UPDATE REQUEST");
+    console.log("========================================");
 
-    const { first_name, last_name, phone, city_id, email } = req.body;
+    // --------------------------------------------------
+    // 1. AUTHENTICATION CHECK
+    // --------------------------------------------------
 
-    if (!first_name || !last_name) {
-      return res.status(400).json({
+    const userId = req.user?.id;
+
+    console.log("USER ID:", userId);
+
+    if (!userId) {
+      return res.status(401).json({
         success: false,
-        message: "First name and last name are required",
+        message: "Unauthorized",
       });
     }
 
-    const full_name = `${first_name} ${last_name}`;
+    // --------------------------------------------------
+    // 2. READ REQUEST BODY
+    // --------------------------------------------------
+
+    const {
+      first_name,
+      last_name,
+      phone,
+      city_id,
+      email,
+    } = req.body;
+
+    console.log("BODY:", {
+      first_name,
+      last_name,
+      phone,
+      city_id,
+      email,
+    });
+
+    console.log(
+      "FILE:",
+      req.file
+        ? {
+          originalname: req.file.originalname,
+          mimetype: req.file.mimetype,
+          size: req.file.size,
+          path: req.file.path,
+          filename: req.file.filename,
+        }
+        : null
+    );
+
+    // --------------------------------------------------
+    // 3. FIND USER
+    // --------------------------------------------------
 
     const user = await User.findByPk(userId);
 
@@ -107,39 +152,158 @@ async function updateUserProfile(req, res, next) {
       });
     }
 
-    let profile_image = user.profile_image;
+    // --------------------------------------------------
+    // 4. VALIDATE REQUIRED NAME FIELDS
+    // --------------------------------------------------
 
-    if (req.file) {
-      profile_image = req.file.path;
-      let profile_image = user.profile_image;
+    const finalFirstName =
+      first_name !== undefined
+        ? String(first_name).trim()
+        : String(user.first_name || "").trim();
 
-      if (req.file) {
-        profile_image = req.file.path;
-      }
+    const finalLastName =
+      last_name !== undefined
+        ? String(last_name).trim()
+        : String(user.last_name || "").trim();
 
-      await user.update({
-        first_name,
-        last_name,
-        full_name,
-        email,
-        phone,
-        city_id,
-        profile_image,
-      });
-
-      return res.json({
-        success: true,
-        message: "Profile updated successfully",
-        data: {
-          ...user.dataValues,
-          profile_image: user.profile_image || null,
-        },
+    if (!finalFirstName || !finalLastName) {
+      return res.status(400).json({
+        success: false,
+        message: "First name and last name are required",
       });
     }
-  } catch (err) {
-    next(err);
+
+    // --------------------------------------------------
+    // 5. BUILD UPDATE DATA
+    // --------------------------------------------------
+
+    const updateData = {
+      first_name: finalFirstName,
+      last_name: finalLastName,
+      full_name: `${finalFirstName} ${finalLastName}`.trim(),
+    };
+
+    // --------------------------------------------------
+    // 6. OPTIONAL EMAIL
+    // --------------------------------------------------
+
+    if (email !== undefined) {
+      const cleanEmail = String(email).trim();
+
+      if (cleanEmail.length > 0) {
+        updateData.email = cleanEmail;
+      }
+    }
+
+    // --------------------------------------------------
+    // 7. OPTIONAL PHONE
+    // --------------------------------------------------
+
+    if (phone !== undefined) {
+      updateData.phone = String(phone).trim();
+    }
+
+    // --------------------------------------------------
+    // 8. OPTIONAL CITY
+    // --------------------------------------------------
+
+    if (city_id !== undefined && city_id !== "") {
+      const parsedCityId = Number(city_id);
+
+      if (!Number.isInteger(parsedCityId) || parsedCityId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid city_id",
+        });
+      }
+
+      updateData.city_id = parsedCityId;
+    }
+
+    // --------------------------------------------------
+    // 9. PROFILE IMAGE
+    // --------------------------------------------------
+
+
+
+    if (req.file) {
+      console.log("📸 NEW PROFILE IMAGE RECEIVED");
+
+      if (!req.file.path) {
+        return res.status(500).json({
+          success: false,
+          message: "Profile image uploaded but Cloudinary URL is missing",
+        });
+      }
+
+      updateData.profile_image = req.file.path;
+
+      console.log("☁️ CLOUDINARY PROFILE IMAGE URL:", updateData.profile_image);
+    } else {
+      updateData.profile_image = user.profile_image || null;
+      console.log( "ℹ️ NO NEW PROFILE IMAGE - KEEPING EXISTING IMAGE");
+    }
+
+    // --------------------------------------------------
+    // 10. DEBUG UPDATE DATA
+    // --------------------------------------------------
+
+    console.log("📝 FINAL PROFILE UPDATE DATA:");
+    console.log(updateData);
+
+    // --------------------------------------------------
+    // 11. UPDATE DATABASE
+    // --------------------------------------------------
+
+    await user.update(updateData);
+
+    // --------------------------------------------------
+    // 12. RELOAD USER FROM DATABASE
+    // --------------------------------------------------
+
+    await user.reload();
+
+    console.log("========================================");
+    console.log("✅ PROFILE DATABASE UPDATE SUCCESS");
+    console.log("USER ID:", user.id);
+    console.log("PROFILE IMAGE:", user.profile_image);
+    console.log("========================================");
+
+    // --------------------------------------------------
+    // 13. RETURN SINGLE CONSISTENT RESPONSE
+    // --------------------------------------------------
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+
+      data: {
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        full_name: user.full_name,
+        email: user.email,
+        phone: user.phone,
+        city_id: user.city_id,
+        profile_image: user.profile_image || null,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("========================================");
+    console.error("❌ PROFILE UPDATE ERROR");
+    console.error(error);
+    console.error("========================================");
+
+    return res.status(500).json({
+      success: false,
+      message: "Profile update failed",
+      error: error.message,
+    });
   }
 }
+
+
 
 async function getUserProfileStats(req, res) {
   try {
