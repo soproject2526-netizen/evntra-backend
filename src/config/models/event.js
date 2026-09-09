@@ -7,6 +7,7 @@ module.exports = (sequelize, DataTypes) => {
     title: { type: DataTypes.STRING, allowNull: false },
     description: { type: DataTypes.TEXT },
     //likes_count: {type: DataTypes.INTEGER,allowNull: false,defaultValue: 0},
+    comments_count: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0, },
     city_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
     venue_name: { type: DataTypes.STRING },
     address: { type: DataTypes.STRING },
@@ -39,6 +40,11 @@ module.exports = (sequelize, DataTypes) => {
     Event.belongsTo(models.User, {
       foreignKey: "organizer_id",
       as: "organizer"
+    });
+
+    Event.hasMany(models.Comment, {
+      foreignKey: 'event_id',
+      as: 'comments',
     });
   };
 

@@ -113,39 +113,238 @@ async function logShare(req, res, next) {
  */
 async function listComments(req, res, next) {
   try {
-    const eventId = req.params.id;
-    const page = Math.max(1, parseInt(req.query.page || '1', 10));
-    const limit = Math.min(100, parseInt(req.query.limit || '20', 10));
+    const eventId = Number(req.params.id);
+
+    if (!Number.isInteger(eventId) || eventId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid event ID',
+      });
+    }
+
+    const event = await Event.findByPk(eventId, {
+      attributes: ['id'],
+    });
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found',
+      });
+    }
+
+    let page = parseInt(req.query.page || '1', 10);
+    let limit = parseInt(req.query.limit || '20', 10);
+
+    if (!Number.isInteger(page) || page < 1) {
+      page = 1;
+    }
+
+    if (!Number.isInteger(limit) || limit < 1) {
+      limit = 20;
+    }
+
+    limit = Math.min(limit, 50);
+
     const offset = (page - 1) * limit;
 
     const { rows, count } = await Comment.findAndCountAll({
-      where: { event_id: eventId },
-      order: [['created_at', 'ASC']],
-      limit, offset
+      where: {
+        event_id: eventId,
+        parent_id: null,
+      },
+
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: [
+            'id',
+            'full_name',
+            'profile_image',
+          ],
+        },
+      ],
+
+      order: [
+        ['created_at', 'ASC'],
+        ['id', 'ASC'],
+      ],
+
+      limit,
+      offset,
     });
 
-    return res.json({ page, limit, total: count, data: rows });
-  } catch (err) { next(err); }
+    return res.status(200).json({
+      success: true,
+
+      page,
+      limit,
+      total: count,
+
+      has_more: offset + rows.length < count,
+
+      data: rows,
+    });
+  } catch (err) {
+    console.error('❌ LIST COMMENTS ERROR:', err);
+    return next(err);
+  }
 }
 
 async function createComment(req, res, next) {
   const user = req.user;
-  if (!user) return res.status(401).json({ message: 'Authentication required' });
-  const userId = user.id;
-  const eventId = req.params.id;
-  const { message, parent_id } = req.body;
-  if (!message || message.trim().length === 0) return res.status(400).json({ message: 'Message required' });
 
-  const t = await sequelize.transaction();
+  if (!user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required',
+    });
+  }
+
+  const userId = Number(user.id);
+  const eventId = Number(req.params.id);
+
+  if (!Number.isInteger(eventId) || eventId <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid event ID',
+    });
+  }
+
+  const rawMessage = req.body?.message;
+
+  if (typeof rawMessage !== 'string') {
+    return res.status(400).json({
+      success: false,
+      message: 'Comment message is required',
+    });
+  }
+
+  const message = rawMessage.trim();
+
+  if (message.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Comment cannot be empty',
+    });
+  }
+
+  if (message.length > 1000) {
+    return res.status(400).json({
+      success: false,
+      message: 'Comment cannot exceed 1000 characters',
+    });
+  }
+
+  let parentId = null;
+
+  if (
+    req.body.parent_id !== undefined &&
+    req.body.parent_id !== null &&
+    req.body.parent_id !== ''
+  ) {
+    parentId = Number(req.body.parent_id);
+
+    if (!Number.isInteger(parentId) || parentId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid parent comment ID',
+      });
+    }
+  }
+
+  const transaction = await sequelize.transaction();
+
   try {
-    const comment = await Comment.create({ user_id: userId, event_id: eventId, parent_id: parent_id || null, message }, { transaction: t });
-    // update counter if not using triggers
-    await Event.increment({ comments_count: 1 }, { where: { id: eventId }, transaction: t });
-    await t.commit();
-    return res.status(201).json(comment);
+    const event = await Event.findByPk(eventId, {
+      attributes: ['id'],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!event) {
+      await transaction.rollback();
+
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found',
+      });
+    }
+
+    if (parentId !== null) {
+      const parentComment = await Comment.findOne({
+        where: {
+          id: parentId,
+          event_id: eventId,
+        },
+        attributes: ['id'],
+        transaction,
+      });
+
+      if (!parentComment) {
+        await transaction.rollback();
+
+        return res.status(400).json({
+          success: false,
+          message: 'Parent comment not found',
+        });
+      }
+    }
+
+    const comment = await Comment.create(
+      {
+        user_id: userId,
+        event_id: eventId,
+        parent_id: parentId,
+        message,
+      },
+      {
+        transaction,
+      }
+    );
+
+    await Event.increment(
+      {
+        comments_count: 1,
+      },
+      {
+        where: {
+          id: eventId,
+        },
+        transaction,
+      }
+    );
+
+    await transaction.commit();
+
+    const createdComment = await Comment.findByPk(comment.id, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: [
+            'id',
+            'full_name',
+            'profile_image',
+          ],
+        },
+      ],
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Comment added successfully',
+      data: createdComment,
+    });
   } catch (err) {
-    await t.rollback();
-    next(err);
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+
+    console.error('❌ CREATE COMMENT ERROR:', err);
+
+    return next(err);
   }
 }
 

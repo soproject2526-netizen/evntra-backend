@@ -41,9 +41,9 @@ db.Message = require('./message')(sequelize, Sequelize.DataTypes);
 // ASSOCIATIONS
 
 // User
-db.User.hasMany(db.Event, { foreignKey: 'organizer_id', as: 'organized_events' });
+db.User.hasMany(db.Event, { foreignKey: 'organizer_id', as:'organized_events' });
 db.User.hasMany(db.Like, { foreignKey: 'user_id' });
-db.User.hasMany(db.Comment, { foreignKey: 'user_id' });
+db.User.hasMany(db.Comment, {foreignKey: 'user_id',as: 'comments',});
 db.User.hasMany(db.Notification, { foreignKey: 'user_id' });
 db.User.hasMany(db.Message, { foreignKey: 'sender_id' });
 
@@ -107,11 +107,13 @@ db.OrganizerKYC.belongsTo(db.User, {
 });
 
 // Event -> likes/comments
-db.Event.hasMany(db.Like, { foreignKey: 'event_id' });
-db.Like.belongsTo(db.Event, { foreignKey: 'event_id' });
-
-db.Event.hasMany(db.Comment, { foreignKey: 'event_id' });
-db.Comment.belongsTo(db.Event, { foreignKey: 'event_id' });
+db.Event.hasMany(db.Like, {foreignKey: 'event_id',});
+db.Like.belongsTo(db.Event, {foreignKey: 'event_id',});
+db.Event.hasMany(db.Comment, { foreignKey: 'event_id', as: 'comments',});
+db.Comment.belongsTo(db.Event,{foreignKey: 'event_id',as: 'event',});
+db.Comment.belongsTo(db.User,{foreignKey: 'user_id', as: 'user',});
+db.Comment.belongsTo(db.Comment,{ foreignKey: 'parent_id', as: 'parent',});
+db.Comment.hasMany(db.Comment,{ foreignKey: 'parent_id', as: 'replies',});
 
 // Chat rooms / messages
 db.Event.hasOne(db.ChatRoom, { foreignKey: 'event_id', as: 'chat_room' });

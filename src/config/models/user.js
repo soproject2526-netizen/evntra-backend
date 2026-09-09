@@ -84,6 +84,11 @@ module.exports = (sequelize, DataTypes) => {
       updatedAt: 'updated_at',
     }
   );
-
+  User.associate = (models) => {
+    User.hasMany(models.Comment, {
+      foreignKey: 'user_id',
+      as: 'comments',
+    });
+  };
   return User;
 };
