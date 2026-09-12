@@ -151,7 +151,6 @@ async function listEvents(req, res, next) {
     const attributes = {
       include: [
         [literal('(SELECT COUNT(1) FROM likes WHERE likes.event_id = Event.id)'), 'likes_count'],
-        [literal('(SELECT COUNT(1) FROM comments WHERE comments.event_id = Event.id)'), 'comments_count'],
         [
           userId
             ? literal(`(
