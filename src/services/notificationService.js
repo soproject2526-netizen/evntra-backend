@@ -1,5 +1,4 @@
-const { Op } = require('sequelize');
-const { Notification } = require('../config/models/notification');
+const { Notification } = require('../config/models');
 
 const MAX_LIMIT = 50;
 
