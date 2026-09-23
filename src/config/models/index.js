@@ -33,7 +33,7 @@ db.OrganizerKYC = require('./organizer_kyc')(sequelize, Sequelize.DataTypes);
 db.EventSubcategory = require('./event_subcategory')(sequelize, Sequelize.DataTypes);
 db.Like = require('./like')(sequelize, Sequelize.DataTypes);
 db.Comment = require('./comment')(sequelize, Sequelize.DataTypes);
-db.Notification = require('./notification')(sequelize, Sequelize.DataTypes);
+// db.Notification = require('./notification')(sequelize, Sequelize.DataTypes);
 db.ChatRoom = require('./chat_room')(sequelize, Sequelize.DataTypes);
 db.ChatRoomMoreInfo = require('./chat_room_more_info')(sequelize, Sequelize.DataTypes);
 db.Message = require('./message')(sequelize, Sequelize.DataTypes);
@@ -44,7 +44,7 @@ db.Message = require('./message')(sequelize, Sequelize.DataTypes);
 db.User.hasMany(db.Event, { foreignKey: 'organizer_id', as:'organized_events' });
 db.User.hasMany(db.Like, { foreignKey: 'user_id' });
 db.User.hasMany(db.Comment, {foreignKey: 'user_id',as: 'comments',});
-db.User.hasMany(db.Notification, { foreignKey: 'user_id' });
+db.User.hasMany(db.Notification, { foreignKey: 'user_id', as: 'notifications',});
 db.User.hasMany(db.Message, { foreignKey: 'sender_id' });
 
 // City
@@ -125,6 +125,6 @@ db.Message.belongsTo(db.ChatRoom, { foreignKey: 'room_id' });
 db.Message.belongsTo(db.User, { foreignKey: 'sender_id', as: 'sender' });
 
 // Notification belongsTo User
-db.Notification.belongsTo(db.User, { foreignKey: 'user_id' });
+db.Notification.belongsTo(db.User, { foreignKey: 'user_id', as: 'user',});
 
 module.exports = db;

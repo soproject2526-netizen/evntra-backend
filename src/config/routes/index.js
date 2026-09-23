@@ -52,4 +52,6 @@ router.use(
   require("./organizer/organizerDashboardRoutes"),
 );
 
+router.use('/notifications', require('../routes/notifications'));
+
 module.exports = router;
